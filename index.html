@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>複数画像の自動スクロール表示</title>
+	<style>
+	 * { padding: 20; margin:20; }
+				canvas { background: white;
+				display: block;
+				margin: 0 auto; }
+		
+		#canvas {
+			outline: 1px solid #AAAAAA;
+			/* widthとheightはタグの属性として書く． CSSで書くとデフォルトの大きさ(300*150)に拡大・縮小される */
+		}
+		button {
+			width : 95px;
+			margin : 10px;
+		}
+	</style>
+    <script type="text/javascript">
+	"use strict";
+
+	var newScroller, scroller1, scroller2;
+
+	/*
+		複数の画像を順にスクロール表示するオブジェクトを生成する関数．
+		使い方：生成したオブジェクトにcontextと画像をセットしてからstart.
+		(contextのセットが先．画像のセットで最初の画像を表示するため．)
+		位置やサイズの設定，スクロール方向やスピードの設定も可能．
+	*/
+	newScroller = function () {
+		var that, x, y, w, h, imageH, imageW, dw, dh, images, imageNo, context, interval, timerID, scrolling, direction, verticalScroll, horizontalScroll;
+
+		that = { };
+		x = 0;
+		y = 0;				// 表示位置
+		// w, h は 表示サイズ
+		// imageH，imageW は（最初の画像の）元の画像のサイズ （画像サイズは全て同じと仮定している）
+		dw = 0;
+		dh = 0;						// スクロールした幅
+		images = [];				// 画像の配列
+		imageNo = 0;				// 何番目の画像を表示しているか
+		interval = 30;				// スクロールの速さ （msで指定）デフォルトでは，30msで元の画像の1px分移動
+		scrolling = false;			// スクロール中か否か
+		direction = 0;				// 縦方向(VERTICAL)か横方向(HORIZONTAL)か デフォルトではVERTICAL
+
+		// 表示位置を指定（canvas上の表示位置をpxで指定）
+		that.setPosition = function (x1, y1) {
+			x = x1;
+			y = y1;
+		};
+
+		// 表示サイズを指定
+		that.setSize = function (w1, h1) {
+			w = w1;
+			h = h1;
+		};
+
+		// コンテクストを設定
+		that.setContext = function (c) {
+			context = c;
+		};
+
+		// 画像を設定 （引数は画像ファイルのURLの配列）
+		that.setImages = function (files) {
+			var i, img;
+			for (i = 0; i < files.length; i += 1) {
+				img = new Image();
+				img.src = files[i];
+				images.push(img);
+			}
+			images[0].onload = function () {
+				var img = images[0];
+				// 全ての画像の大きさが等しいことを前提に作成
+				imageW = img.width;
+				imageH = img.height;
+				if (w === undefined) {
+					// 大きさがセットされていなかったら，最初の画像の大きさで表示する．
+					w = img.width;
+					h = img.height;
+				}
+				context.drawImage(img, 0, 0, img.width, img.height, x, y, w, h);
+			};
+		};
+
+		// スクロールの速さを指定 （30と指定すると30msで1px動く）
+		that.setSpeed = function (s) {
+			interval = s;
+		};
+
+		// setDirectionのパラメータとして使用
+		that.HIRIZONTAL = 0;
+		that.VERTICAL = 1;
+
+		// 方向を指定 0で縦スクロール(下から上へ)，1で横スクロール(右から左へ)
+		that.setDirection = function (d) {
+			direction = d;
+		};
+
+		// 縦スクロール
+		verticalScroll = function () {
+			dh += 1;
+			if (dh === imageH) {
+				imageNo = (imageNo + 1) % images.length;
+				dh = 0;
+			}
+			context.drawImage(images[imageNo], 0, dh, imageW, imageH - dh, x, y, w, (imageH - dh) * h / imageH);
+			context.drawImage(images[(imageNo + 1) % images.length], 0, 0, imageW, dh, x, y + (imageH - dh) * h / imageH, w, dh * h / imageH);
+		};
+
+		// 横スクロール
+		horizontalScroll = function () {
+			dw += 1;
+			if (dw === imageW) {
+				imageNo = (imageNo + 1) % images.length;
+				dw = 0;
+			}
+			context.drawImage(images[imageNo], dw, 0, imageW - dw, imageH, x, y, (imageW - dw) * w / imageW, h);
+			context.drawImage(images[(imageNo + 1) % images.length], 0,  0, dw, imageH, x + (imageW - dw) * w / imageW, y, dw * w / imageW, h);
+		};
+
+		// スクロール開始
+		that.start = function () {
+			if (scrolling) {
+				return;
+			}
+			if (direction === that.HORIZONTAL) {
+				timerID = setInterval(horizontalScroll, interval);
+			} else {
+				timerID = setInterval(verticalScroll, interval);
+			}
+			scrolling = true;
+		};
+
+		// スクロール停止
+		that.stop = function () {
+			if (scrolling) {
+				clearInterval(timerID);
+				scrolling = false;
+			}
+		};
+
+		// スクロールしているか否かを返す
+		that.isScrolling = function () {
+			return scrolling;
+		};
+
+		return that;
+	};
+	// newScrollerの定義 ここまで
+
+
+	// ここからメイン
+
+	window.onload = function () {
+		var canvas, context, imageFiles1, imageFiles2, toggle, b1, b2;
+
+		toggle = function (b, scroller) {
+			if (scroller.isScrolling()) {
+				scroller.stop();
+				b.textContent = "START";
+			} else {
+				scroller.start();
+				b.textContent = "STOP";
+			}
+			// innerTextは非標準．Firefoxでは動かない．標準のtextContentを用いる．
+		};
+
+		// contextの取得
+		canvas = document.getElementById("canvas");
+		context = canvas.getContext("2d");
+
+		// 一つ目のscroller
+		scroller1 = newScroller();
+		imageFiles1 = [ "images/03.JPG", "images/04.JPG", "images/05.JPG", "images/06.JPG", "images/07.JPG", "images/08.JPG", "images/09.JPG", "images/10.JPG","images/11.JPG","images/12.JPG", "images/13.JPG","images/14.JPG", "images/15.JPG","images/16.JPG", "images/17.JPG","images/18.JPG", "images/19.JPG","images/20.JPG"];
+		scroller1.setContext(context);
+		scroller1.setPosition(10, 10);
+//		scroller1.setSize(95, 70);
+		scroller1.setImages(imageFiles1);
+		scroller1.setSpeed(20);
+		scroller1.setDirection(scroller1.HORIZONTAL);
+		b1 = document.getElementById('b1');
+		b1.onclick = function () {
+			toggle(b1, scroller1);
+		};
+
+		// 二つ目のscroller
+		//scroller2 = newScroller();
+		//imageFiles2 = ["images/11.JPG", "images/12.JPG", "images/13.JPG", "images/14.JPG", "images/15.JPG", "images/16.JPG", "images/////17.JPG", "images/18.JPG", "images/19.JPG", "images/20.JPG"];
+		//scroller2.setContext(context);
+		//scroller2.setPosition(125, 10);
+//		scroller2.setSize(70, 95);
+		//scroller2.setImages(imageFiles2);
+		//scroller2.setSpeed(40);
+		//scroller2.setDirection(scroller2.VERTICAL);
+		//b2 = document.getElementById('b2');
+		//b2.onclick = function () {
+			//toggle(b2, scroller2);
+		//};
+	};
+    </script>
+</head>
+<body>
+    <canvas id="canvas" width="330" height="215"></canvas>
+    <p><button id="b1">START</button><button id="b2">START</button></p>
+    <p>2003年から2020年までの写真です。<br>左のスタートボタンを使ってください。</p>
+</body>
+</html>
