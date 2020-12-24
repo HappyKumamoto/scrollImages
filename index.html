@@ -4,19 +4,23 @@
     <meta charset="utf-8" />
     <title>複数画像の自動スクロール表示</title>
 	<style>
-	 * { padding: 20; margin:20; }
+	 body{
+	      text-align: center;
+	      }
+		
+	   * { padding: 20; margin:20; }
 				canvas { background: white;
 				display: block;
 				margin: 0 auto; }
 		
-		#canvas {
-			outline: 1px solid #AAAAAA;
-			/* widthとheightはタグの属性として書く． CSSで書くとデフォルトの大きさ(300*150)に拡大・縮小される */
-		}
-		button {
-			width : 95px;
-			margin : 10px;
-		}
+      #canvas {
+		  outline: 1px solid #AAAAAA;
+		  /* widthとheightはタグの属性として書く． CSSで書くとデフォルトの大きさ(300*150)に拡大・縮小される */
+	      }
+      button {
+		width : 95px;
+		margin : 10px;
+	     }
 	</style>
     <script type="text/javascript">
 	"use strict";
